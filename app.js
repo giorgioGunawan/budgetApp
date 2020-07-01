@@ -9,12 +9,26 @@ var budgetController = (function(){
         this.id = id;
         this.description = description;
         this.value = value;
+        this.percentages = -1;
     };
     
     var Income = function(id, description, value){
         this.id = id;
         this.description = description;
         this.value = value;
+    };
+    
+    Expense.prototype.calculatePercentage = function(totalIncome){
+        
+        if( totalIncome > 0){
+            this.percentage = Math.round((this.value / totalIncome) * 100);
+        }else{
+            this.percentage = -1;
+        }        
+    };
+    
+    Expense.prototype.getPercentage = function(){
+        return this.percentage;
     };
     
     var data = {
@@ -100,11 +114,21 @@ var budgetController = (function(){
             }
         },
         
-        // home-made function
         calculatePercentages: function(){
             
-            // calculate 
+            data.allItems.exp.forEach(function(cur){
+               cur.calculatePercentage(data.totals.inc); 
+            });
             
+        },
+        
+        getPercentages: function(){
+            // here we use map because we want to return smth and store it somehwere
+            var allPerc = data.allItems.exp.map(function(cur){
+                
+                return cur.getPercentage();
+            });
+            return allPerc;
         },
         
         testing: function(){
@@ -138,7 +162,8 @@ var UIController = (function(){
         incomeLabel: '.budget__income--value',
         expensesLabel: '.budget__expenses--value',
         percentageLabel: '.budget__expenses--percentage',
-        container: '.container'
+        container: '.container',
+        expensesPercLabel: '.item__percentage',
     };
     // whatever we return will be assigned to UIController var
     return{
@@ -213,11 +238,34 @@ var UIController = (function(){
             document.querySelector(DOMstrings.expensesLabel).textContent = obj.totalExp;
             
             if(obj.percentage > 0){
-                document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage;
-                document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage;
+                document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage + '%';
+                
             }else{
                 document.querySelector(DOMstrings.percentageLabel).textContent = '---';
             }
+            
+        },
+        
+        displayPercentages: function(percentages){
+            
+            var fields = document.querySelectorAll(DOMstrings.expensesPercLabel);
+            
+            
+            var nodeListForEach = function(list, callback){
+                for(var i = 0; i < list.length; i++){
+                    // current and index
+                    callback(list[i], i);
+                }
+            };
+            
+            nodeListForEach(fields, function(current, index){
+                
+                if(percentages[index] > 0){
+                    current.textContent = percentages[index] + '%';
+                }else{
+                    current.textContent = '---';
+                }                
+            });
             
         },
     }
@@ -259,8 +307,10 @@ var controller = (function(budgetCtrl, UICtrl){
         budgetCtrl.calculatePercentages();
         
         // 2. read percentages from budget controller
+        var percentages = budgetCtrl.getPercentages();
         
         // 3. update UI with new percentages
+        UICtrl.displayPercentages(percentages);
     };
     
     var ctrlAddItem = function(){
